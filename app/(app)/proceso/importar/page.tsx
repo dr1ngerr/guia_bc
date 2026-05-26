@@ -157,18 +157,17 @@ export default function ImportarApuntesPage() {
         <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
           <p className="font-medium">Gemini no está configurado en producción</p>
           <p className="mt-1">
-            Para analizar capturas con IA gratis, añade{" "}
+            Añade{" "}
             <code className="text-xs bg-amber-100 px-1 rounded">GEMINI_API_KEY</code>{" "}
-            en Vercel (clave de{" "}
-            <a
-              href="https://aistudio.google.com/apikey"
-              className="underline"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Google AI Studio
+            en Vercel → Settings → Environment Variables (marca{" "}
+            <strong>Production</strong>) y luego <strong>Redeploy</strong>.{" "}
+            <a href="/api/diagnostico" className="underline" target="_blank" rel="noreferrer">
+              Comprobar diagnóstico
             </a>
-            ) y haz redeploy. Sin eso solo se extrae texto de PDF/Word.
+            {" · "}
+            <a href="/api/diagnostico/gemini" className="underline" target="_blank" rel="noreferrer">
+              Probar Gemini
+            </a>
           </p>
         </div>
       )}

@@ -6,6 +6,7 @@ import {
   textoAHtml,
 } from "@/lib/importador/utilidades";
 import type { TipoAlerta } from "@/lib/supabase/tipos";
+import { obtenerClaveGemini } from "@/lib/importador/config-gemini";
 
 export const ESQUEMA_GUIA_JSON = `{
   "nombre": "string",
@@ -87,12 +88,7 @@ function validarAlerta(t: unknown): TipoAlerta | null {
   return null;
 }
 
-export function obtenerClaveGemini(): string | undefined {
-  return (
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY ??
-    process.env.GEMINI_API_KEY
-  );
-}
+export { obtenerClaveGemini, estadoGeminiEnServidor } from "@/lib/importador/config-gemini";
 
 export function proveedorIADisponible(): "gemini" | null {
   return obtenerClaveGemini() ? "gemini" : null;
