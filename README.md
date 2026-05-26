@@ -140,7 +140,7 @@ O invítalo desde **Configuración** en la app (solo si ya eres admin).
 4. **Generar guía con IA** → vista previa → **Crear guía y abrir editor**.
 5. Añade capturas anotadas en el editor y publica.
 
-Requiere `OPENAI_API_KEY` (local y Vercel). Las imágenes usan GPT-4o visión.
+Requiere `GEMINI_API_KEY` (Google AI Studio, plan gratuito) en local y Vercel. Las imágenes usan Gemini visión.
 Los vídeos no se importan automáticamente por ahora.
 
 ## Estructura

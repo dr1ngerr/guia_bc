@@ -32,31 +32,28 @@ export async function estructurarApuntes(
     );
   }
 
-  const hayIA = proveedorIADisponible() !== null;
+  const hayGemini = proveedorIADisponible() !== null;
 
-  if (tieneImagenes && !hayIA) {
+  if (tieneImagenes && !hayGemini) {
     throw new Error(
-      "Para importar imágenes configura GEMINI_API_KEY o OPENAI_API_KEY en Vercel."
+      "Para importar imágenes configura GEMINI_API_KEY en Vercel (Google AI Studio, plan gratuito)."
     );
   }
 
-  if (preferirIA && hayIA) {
+  if (preferirIA && hayGemini) {
     try {
-      const { guia, usoVision, proveedor } = await generarGuiaConProveedor(
+      const { guia, usoVision } = await generarGuiaConProveedor(
         textoCombinado,
         imagenes
       );
 
-      const nombreProveedor =
-        proveedor === "gemini" ? "Gemini" : "OpenAI";
-
       if (usoVision) {
         avisos.push(
-          `Analizadas ${imagenes.length} imagen(es) con ${nombreProveedor}. Revisa cada paso antes de publicar.`
+          `Analizadas ${imagenes.length} imagen(es) con Gemini. Revisa cada paso antes de publicar.`
         );
       } else {
         avisos.push(
-          `Guía generada con ${nombreProveedor} a partir del texto. Revisa antes de publicar.`
+          "Guía generada con Gemini a partir del texto. Revisa antes de publicar."
         );
       }
 
@@ -80,39 +77,38 @@ export async function estructurarApuntes(
       if (tieneImagenes && tieneTexto) {
         const faltaGemini = !obtenerClaveGemini();
         avisos.push(
-          faltaGemini && esErrorSinCuotaIA(e)
-            ? "No se analizaron capturas: añade GEMINI_API_KEY en Vercel (Google AI Studio, plan gratuito) y redeploy."
+          faltaGemini
+            ? "No se analizaron capturas: añade GEMINI_API_KEY en Vercel y redeploy."
             : esErrorSinCuotaIA(e)
-              ? "OpenAI sin crédito y Gemini no disponible. Borrador solo con texto de PDF/Word."
+              ? "Gemini sin cuota disponible. Borrador solo con texto de PDF/Word."
               : `No se analizaron imágenes (${mensaje}). Borrador solo con texto extraído.`
         );
       } else {
         avisos.push(
           esErrorSinCuotaIA(e)
-            ? "IA sin crédito. Se usó el analizador automático."
-            : "IA no disponible. Se usó el analizador automático."
+            ? "Gemini sin cuota. Se usó el analizador automático."
+            : "Gemini no disponible. Se usó el analizador automático."
         );
       }
     }
   } else if (tieneImagenes) {
     throw new Error(
-      "GEMINI_API_KEY u OPENAI_API_KEY requerida para procesar imágenes."
+      "GEMINI_API_KEY requerida para procesar imágenes (Google AI Studio)."
     );
-  } else if (preferirIA && !hayIA) {
+  } else if (preferirIA && !hayGemini) {
     avisos.push(
-      "Añade GEMINI_API_KEY u OPENAI_API_KEY en Vercel. Usando analizador automático."
+      "Añade GEMINI_API_KEY en Vercel. Usando analizador automático."
     );
   }
 
   if (!tieneTexto) {
-    throw new Error("No se pudo extraer texto; solo imágenes requieren IA activa.");
+    throw new Error("No se pudo extraer texto; solo imágenes requieren Gemini activo.");
   }
 
   const guia = generarGuiaHeuristica(textoCombinado, avisos);
   return { guia, metodo: "heuristica", avisos, fuentes };
 }
 
-/** Para diagnóstico */
 export function iaConfigurada(): boolean {
   return proveedorIADisponible() !== null;
 }

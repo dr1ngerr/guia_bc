@@ -91,10 +91,10 @@ export default function ImportarApuntesPage() {
         e instanceof Error ? e.message : "No se pudo generar";
       toast({
         title:
-          descripcion.includes("crédito") ||
-          descripcion.includes("platform.openai.com") ||
-          descripcion.includes("GEMINI")
-            ? "IA sin crédito"
+          descripcion.includes("cuota") ||
+          descripcion.includes("GEMINI") ||
+          descripcion.includes("Gemini")
+            ? "Gemini no disponible"
             : "Error",
         description: descripcion,
         variant: "destructive",
@@ -147,7 +147,7 @@ export default function ImportarApuntesPage() {
           Importar con IA
         </h1>
         <p className="text-muted-foreground mt-1">
-          Sube capturas, PDF o Word. Recomendado:{" "}
+          Sube capturas, PDF o Word. La IA usa{" "}
           <strong>Google Gemini</strong> (plan gratuito en AI Studio). Las imágenes
           se optimizan al subir (máx. ~3,5 MB).
         </p>

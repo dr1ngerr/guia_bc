@@ -94,8 +94,6 @@ export function obtenerClaveGemini(): string | undefined {
   );
 }
 
-export function proveedorIADisponible(): "gemini" | "openai" | null {
-  if (obtenerClaveGemini()) return "gemini";
-  if (process.env.OPENAI_API_KEY) return "openai";
-  return null;
+export function proveedorIADisponible(): "gemini" | null {
+  return obtenerClaveGemini() ? "gemini" : null;
 }

@@ -1,35 +1,28 @@
-/** Mensajes claros para errores de OpenAI, Gemini y similares. */
+/** Mensajes claros para errores de Gemini. */
 export function formatearErrorIA(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
 
-  if (
-    /insufficient_quota|exceeded your current quota|billing/i.test(raw)
-  ) {
-    return (
-      "La cuenta de OpenAI no tiene crédito. Recarga en platform.openai.com " +
-      "o configura GEMINI_API_KEY (Google AI Studio) en Vercel."
-    );
-  }
-
   if (/API_KEY_INVALID|API key not valid|invalid.*api.*key/i.test(raw)) {
     return (
-      "La clave de IA no es válida. Revisa GEMINI_API_KEY u OPENAI_API_KEY en Vercel."
+      "La clave GEMINI_API_KEY no es válida. Crea una nueva en Google AI Studio " +
+      "y actualízala en Vercel → Environment Variables, luego redeploy."
     );
   }
 
-  if (/RESOURCE_EXHAUSTED|quota/i.test(raw) && /gemini|google/i.test(raw)) {
+  if (/RESOURCE_EXHAUSTED|quota|rate limit/i.test(raw)) {
     return (
-      "Cuota de Gemini agotada. Revisa facturación en Google AI Studio o espera unos minutos."
+      "Cuota de Gemini agotada o límite de peticiones. Espera unos minutos o revisa " +
+      "tu uso en Google AI Studio."
     );
   }
 
-  if (/rate_limit|429/.test(raw) && !/quota/i.test(raw)) {
-    return "Demasiadas peticiones a la IA. Espera un minuto e inténtalo de nuevo.";
+  if (/GEMINI_API_KEY no configurada/i.test(raw)) {
+    return raw;
   }
 
-  if (raw.startsWith("OpenAI:") || raw.startsWith("Gemini:")) {
+  if (raw.startsWith("Gemini:")) {
     try {
-      const jsonPart = raw.replace(/^(OpenAI|Gemini):\s*\d+\s*/, "");
+      const jsonPart = raw.replace(/^Gemini:\s*\d+\s*/, "");
       const parsed = JSON.parse(jsonPart) as {
         error?: { message?: string };
       };
@@ -46,11 +39,5 @@ export function formatearErrorIA(error: unknown): string {
 
 export function esErrorSinCuotaIA(error: unknown): boolean {
   const raw = error instanceof Error ? error.message : String(error);
-  return /insufficient_quota|exceeded your current quota|RESOURCE_EXHAUSTED|billing/i.test(
-    raw
-  );
+  return /RESOURCE_EXHAUSTED|quota|rate limit/i.test(raw);
 }
-
-/** @deprecated Usar formatearErrorIA */
-export const formatearErrorOpenAI = formatearErrorIA;
-export const esErrorSinCuotaOpenAI = esErrorSinCuotaIA;
