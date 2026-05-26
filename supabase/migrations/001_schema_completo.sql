@@ -207,15 +207,20 @@ begin
   insert into public.perfiles (id, email, nombre, rol, empresa_id)
   values (
     new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'nombre', split_part(new.email, '@', 1)),
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data->>'nombre', split_part(coalesce(new.email, 'usuario'), '@', 1)),
     rol_asignado,
     empresa
-  );
+  )
+  on conflict (id) do nothing;
 
-  update public.invitaciones
-  set aceptada = true
-  where lower(email) = lower(new.email);
+  begin
+    update public.invitaciones
+    set aceptada = true
+    where lower(email) = lower(new.email);
+  exception when others then
+    null;
+  end;
 
   return new;
 end;
@@ -225,6 +230,14 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.manejar_nuevo_usuario();
+
+-- Permisos para registro (evita "Database error saving new user")
+grant usage on schema public to supabase_auth_admin;
+grant insert, select, update on table public.perfiles to supabase_auth_admin;
+grant select on table public.empresa to supabase_auth_admin;
+grant select, update on table public.invitaciones to supabase_auth_admin;
+grant execute on function public.manejar_nuevo_usuario() to supabase_auth_admin;
+grant execute on function public.manejar_nuevo_usuario() to service_role;
 
 -- -----------------------------------------------------------------------------
 -- Row Level Security
@@ -264,6 +277,11 @@ drop policy if exists "perfiles_update_admin" on public.perfiles;
 create policy "perfiles_update_admin" on public.perfiles
   for update to authenticated
   using (public.es_administrador());
+
+drop policy if exists "perfiles_insert_propios" on public.perfiles;
+create policy "perfiles_insert_propios" on public.perfiles
+  for insert to authenticated
+  with check (id = auth.uid());
 
 -- Categorías
 drop policy if exists "categorias_select" on public.categorias;

@@ -1,37 +1,18 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/middleware";
 
 export async function actualizarSesion(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  const { supabase, response } = createClient(request);
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
+  // Renueva la sesión si el token expiró
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const esRutaPublica =
     request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/registro");
+    request.nextUrl.pathname.startsWith("/registro") ||
+    request.nextUrl.pathname.startsWith("/api/diagnostico");
 
   if (!user && !esRutaPublica) {
     const url = request.nextUrl.clone();
@@ -46,5 +27,5 @@ export async function actualizarSesion(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  return response;
 }
