@@ -17,6 +17,10 @@ import {
 import { VistaPreviaGuia } from "@/components/importador/VistaPreviaGuia";
 import { ZonaSubidaArchivos } from "@/components/importador/ZonaSubidaArchivos";
 import type { ResultadoGeneracion } from "@/lib/importador/tipos";
+import {
+  parsearRespuestaApi,
+  prepararArchivosParaSubida,
+} from "@/lib/importador/preparar-archivos-cliente";
 import { toast } from "@/hooks/use-toast";
 
 export default function ImportarApuntesPage() {
@@ -39,19 +43,29 @@ export default function ImportarApuntesPage() {
     setGenerando(true);
     setResultado(null);
     try {
+      const { archivos: listos, avisos: avisosPrep } =
+        await prepararArchivosParaSubida(archivos);
+
+      if (avisosPrep.length > 0) {
+        toast({
+          title: "Imágenes optimizadas",
+          description: avisosPrep.slice(0, 2).join(" · "),
+        });
+      }
+
       const formData = new FormData();
       formData.append("apuntes", apuntes);
       formData.append("usarIA", "true");
-      archivos.forEach((f) => formData.append("archivos", f));
+      listos.forEach((f) => formData.append("archivos", f));
 
       const res = await fetch("/api/proceso/importar/generar", {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al generar");
+      const data = await parsearRespuestaApi(res);
+      if (!res.ok) throw new Error(String(data.error ?? "Error al generar"));
 
-      setResultado(data as ResultadoGeneracion);
+      setResultado(data as unknown as ResultadoGeneracion);
       toast({
         title: "Borrador generado con IA",
         description:
@@ -79,10 +93,10 @@ export default function ImportarApuntesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ guia: resultado.guia }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al crear");
+      const data = await parsearRespuestaApi(res);
+      if (!res.ok) throw new Error(String(data.error ?? "Error al crear"));
       toast({ title: "Guía creada como borrador" });
-      router.push(`/proceso/${data.id}/editar`);
+      router.push(`/proceso/${String(data.id)}/editar`);
     } catch (e) {
       toast({
         title: "Error",
@@ -115,7 +129,8 @@ export default function ImportarApuntesPage() {
         <p className="text-muted-foreground mt-1">
           Sube capturas de pantalla, PDF o Word de los apuntes de tu compañera. La
           IA los convierte en una guía profesional con pasos, alertas y
-          verificaciones. Después añades capturas finales en el editor.
+          verificaciones. Las imágenes se optimizan automáticamente (máx. ~3,5 MB
+          en total). Después añades capturas finales en el editor.
         </p>
       </div>
 

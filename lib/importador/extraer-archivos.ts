@@ -1,7 +1,8 @@
 import type { ContenidoImportado, ImagenParaIA } from "@/lib/importador/tipos";
 
-const MAX_ARCHIVOS = 20;
-const MAX_BYTES_TOTAL = 25 * 1024 * 1024; // 25 MB
+const MAX_ARCHIVOS = 12;
+/** Alineado con límite de body en Vercel serverless (~4,5 MB). */
+const MAX_BYTES_TOTAL = 4 * 1024 * 1024;
 const IMAGEN_MIMES = new Set([
   "image/jpeg",
   "image/png",
@@ -24,7 +25,9 @@ export async function extraerDeArchivos(
   for (const archivo of archivos) {
     bytesTotal += archivo.size;
     if (bytesTotal > MAX_BYTES_TOTAL) {
-      throw new Error("El tamaño total de archivos supera 25 MB.");
+      throw new Error(
+        "El tamaño total supera 4 MB. En producción usa menos archivos o imágenes más pequeñas."
+      );
     }
 
     fuentes.push(archivo.name);

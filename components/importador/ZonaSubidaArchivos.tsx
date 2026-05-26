@@ -71,7 +71,8 @@ export function ZonaSubidaArchivos({
           PNG, JPG, PDF, Word (.docx), texto — varias capturas a la vez
         </p>
         <p className="text-xs text-muted-foreground mt-2">
-          La IA leerá las capturas de pantalla y extraerá los pasos automáticamente
+          La IA leerá las capturas y extraerá los pasos. Máx. 12 archivos (~3,5 MB
+          total); las imágenes se comprimen al generar.
         </p>
       </div>
 
