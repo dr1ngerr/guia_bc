@@ -6,6 +6,7 @@ import {
   textoAHtml,
 } from "@/lib/importador/utilidades";
 import type { TipoAlerta } from "@/lib/supabase/tipos";
+import { formatearErrorOpenAI } from "@/lib/importador/errores-openai";
 
 const ESQUEMA = `{
   "nombre": "string",
@@ -100,7 +101,9 @@ export async function generarGuiaConIA(
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI: ${res.status} ${err.slice(0, 300)}`);
+    throw new Error(
+      formatearErrorOpenAI(new Error(`OpenAI: ${res.status} ${err}`))
+    );
   }
 
   const json = await res.json();

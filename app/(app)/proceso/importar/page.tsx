@@ -74,9 +74,15 @@ export default function ImportarApuntesPage() {
             : "Texto procesado.",
       });
     } catch (e) {
+      const descripcion =
+        e instanceof Error ? e.message : "No se pudo generar";
       toast({
-        title: "Error",
-        description: e instanceof Error ? e.message : "No se pudo generar",
+        title:
+          descripcion.includes("crédito") ||
+          descripcion.includes("platform.openai.com")
+            ? "OpenAI sin crédito"
+            : "Error",
+        description: descripcion,
         variant: "destructive",
       });
     } finally {

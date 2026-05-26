@@ -1,5 +1,9 @@
 import { generarGuiaHeuristica } from "@/lib/importador/parser-heuristico";
 import { generarGuiaConIA } from "@/lib/importador/parser-ia";
+import {
+  esErrorSinCuotaOpenAI,
+  formatearErrorOpenAI,
+} from "@/lib/importador/errores-openai";
 import type { ContenidoImportado, ResultadoGeneracion } from "@/lib/importador/tipos";
 
 export async function estructurarApuntes(
@@ -58,12 +62,26 @@ export async function estructurarApuntes(
         fuentes,
       };
     } catch (e) {
-      if (tieneImagenes) {
-        throw e;
+      const mensaje = formatearErrorOpenAI(e);
+
+      // Solo imágenes: hace falta visión con OpenAI y crédito activo
+      if (tieneImagenes && !tieneTexto) {
+        throw new Error(mensaje);
       }
-      avisos.push(
-        `IA no disponible (${e instanceof Error ? e.message : "error"}). Se usó el analizador automático.`
-      );
+
+      if (tieneImagenes && tieneTexto) {
+        avisos.push(
+          esErrorSinCuotaOpenAI(e)
+            ? "OpenAI sin crédito: no se analizaron las capturas. Se generó un borrador solo con el texto de PDF/Word."
+            : `No se pudieron analizar las imágenes (${mensaje}). Borrador generado solo con texto extraído.`
+        );
+      } else {
+        avisos.push(
+          esErrorSinCuotaOpenAI(e)
+            ? "OpenAI sin crédito. Se usó el analizador automático (sin IA)."
+            : `IA no disponible. Se usó el analizador automático.`
+        );
+      }
     }
   } else if (tieneImagenes) {
     throw new Error("OPENAI_API_KEY requerida para procesar imágenes.");
