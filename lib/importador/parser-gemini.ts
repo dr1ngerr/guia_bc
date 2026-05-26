@@ -5,21 +5,17 @@ import {
   obtenerClaveGemini,
 } from "@/lib/importador/guia-ia-compartido";
 import { formatearErrorIA } from "@/lib/importador/errores-ia";
-
-const MODELO_TEXTO = "gemini-2.0-flash";
-const MODELO_VISION = "gemini-2.0-flash";
+import { llamarGeminiGenerateContent } from "@/lib/importador/cliente-gemini";
 
 export async function generarGuiaConGemini(
   apuntes: string,
   imagenes: ImagenParaIA[] = []
 ): Promise<{ guia: GuiaGenerada; usoVision: boolean }> {
-  const apiKey = obtenerClaveGemini();
-  if (!apiKey) {
+  if (!obtenerClaveGemini()) {
     throw new Error("GEMINI_API_KEY no configurada en el servidor.");
   }
 
   const usoVision = imagenes.length > 0;
-  const model = usoVision ? MODELO_VISION : MODELO_TEXTO;
 
   let instruccion = `Convierte este material en una guía profesional para un sustituto.\n\n`;
   if (apuntes.trim()) {
@@ -43,12 +39,10 @@ export async function generarGuiaConGemini(
     parts.push({ text: `(Captura: ${img.nombre})` });
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  let json: Awaited<ReturnType<typeof llamarGeminiGenerateContent>>["json"];
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  try {
+    const res = await llamarGeminiGenerateContent({
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT_GUIA }] },
       contents: [{ role: "user", parts }],
       generationConfig: {
@@ -56,15 +50,12 @@ export async function generarGuiaConGemini(
         maxOutputTokens: 8192,
         responseMimeType: "application/json",
       },
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(formatearErrorIA(new Error(`Gemini: ${res.status} ${err}`)));
+    });
+    json = res.json;
+  } catch (e) {
+    throw new Error(formatearErrorIA(e));
   }
 
-  const json = await res.json();
   const content = json.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!content) {
     throw new Error("Respuesta vacía de Gemini.");

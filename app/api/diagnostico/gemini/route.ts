@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { obtenerClaveGemini, estadoGeminiEnServidor } from "@/lib/importador/config-gemini";
+import { estadoGeminiEnServidor } from "@/lib/importador/config-gemini";
+import { llamarGeminiGenerateContent } from "@/lib/importador/cliente-gemini";
 
 export const runtime = "nodejs";
 
@@ -16,43 +17,29 @@ export async function GET() {
     });
   }
 
-  const apiKey = obtenerClaveGemini()!;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: 'Responde solo: {"ok":true}' }] }],
-        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 16 },
-      }),
+    const { modelo } = await llamarGeminiGenerateContent({
+      contents: [{ role: "user", parts: [{ text: 'Responde solo: {"ok":true}' }] }],
+      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 16 },
     });
-
-    const texto = await res.text();
-
-    if (!res.ok) {
-      return NextResponse.json({
-        ok: false,
-        variableDetectada: estado.variableDetectada,
-        status: res.status,
-        error: texto.slice(0, 400),
-        ayuda:
-          res.status === 400
-            ? "Clave inválida o API no habilitada. Crea otra clave en AI Studio."
-            : "Revisa cuota o facturación en Google AI Studio.",
-      });
-    }
 
     return NextResponse.json({
       ok: true,
       variableDetectada: estado.variableDetectada,
-      mensaje: "Gemini responde correctamente en producción.",
+      modeloUsado: modelo,
+      mensaje: `Gemini responde correctamente (${modelo}).`,
     });
   } catch (e) {
+    const raw = e instanceof Error ? e.message : "Error de red";
     return NextResponse.json({
       ok: false,
-      error: e instanceof Error ? e.message : "Error de red",
+      variableDetectada: estado.variableDetectada,
+      error: raw.slice(0, 400),
+      ayuda: /API_KEY|invalid.*key|401|403/i.test(raw)
+        ? "Clave inválida. Crea una nueva en https://aistudio.google.com/apikey y redeploy en Vercel."
+        : /no configurada/i.test(raw)
+          ? "Añade GEMINI_API_KEY en Vercel (Production) y Redeploy."
+          : "Revisa cuota en Google AI Studio o prueba otra clave.",
     });
   }
 }

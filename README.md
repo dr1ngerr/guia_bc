@@ -82,8 +82,10 @@ git push -u origin master
 |----------|--------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://wfqmjudujyhkwjewmxrg.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | clave **anon** de Supabase → Settings → API |
+| `GEMINI_API_KEY` | clave de [Google AI Studio](https://aistudio.google.com/apikey) (importador con IA) |
+| `SUPABASE_SERVICE_ROLE_KEY` | opcional: solo para **eliminar usuarios** en Configuración |
 
-4. **Deploy**.
+4. **Deploy** (tras cambiar variables, **Redeploy** obligatorio).
 
 ### 3. Configurar Supabase para la URL de producción
 
@@ -118,6 +120,7 @@ O invítalo desde **Configuración** en la app (solo si ya eres admin).
 ### 5. Comprobar producción
 
 - Abre `https://tu-proyecto.vercel.app/api/diagnostico` → `"conectado": true`
+- Abre `https://tu-proyecto.vercel.app/api/diagnostico/gemini` → `"ok": true`
 - Login con tu usuario admin → crear y **publicar** un proceso de prueba
 - Tu compañero entra y lo ve en el panel
 
