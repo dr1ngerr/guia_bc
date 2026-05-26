@@ -32,6 +32,7 @@ export default function ImportarApuntesPage() {
   const [generando, setGenerando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoGeneracion | null>(null);
+  const [iaGeminiActiva, setIaGeminiActiva] = useState<boolean | null>(null);
 
   const onArchivosChange = useCallback((files: File[]) => {
     setArchivos(files);
@@ -40,6 +41,13 @@ export default function ImportarApuntesPage() {
   useEffect(() => {
     if (!cargandoPerfil && !esAdmin) router.replace("/panel");
   }, [esAdmin, cargandoPerfil, router]);
+
+  useEffect(() => {
+    fetch("/api/diagnostico")
+      .then((r) => r.json())
+      .then((d) => setIaGeminiActiva(Boolean(d.iaGemini)))
+      .catch(() => setIaGeminiActiva(null));
+  }, []);
 
   const puedeGenerar = archivos.length > 0 || textoSuficiente;
 
@@ -139,10 +147,31 @@ export default function ImportarApuntesPage() {
           Importar con IA
         </h1>
         <p className="text-muted-foreground mt-1">
-          Sube capturas, PDF o Word. La IA (Gemini u OpenAI) genera la guía. Las
-          imágenes se optimizan al subir (máx. ~3,5 MB).
+          Sube capturas, PDF o Word. Recomendado:{" "}
+          <strong>Google Gemini</strong> (plan gratuito en AI Studio). Las imágenes
+          se optimizan al subir (máx. ~3,5 MB).
         </p>
       </div>
+
+      {iaGeminiActiva === false && (
+        <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-medium">Gemini no está configurado en producción</p>
+          <p className="mt-1">
+            Para analizar capturas con IA gratis, añade{" "}
+            <code className="text-xs bg-amber-100 px-1 rounded">GEMINI_API_KEY</code>{" "}
+            en Vercel (clave de{" "}
+            <a
+              href="https://aistudio.google.com/apikey"
+              className="underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Google AI Studio
+            </a>
+            ) y haz redeploy. Sin eso solo se extrae texto de PDF/Word.
+          </p>
+        </div>
+      )}
 
       {!resultado ? (
         <div className="space-y-6">

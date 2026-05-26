@@ -78,10 +78,13 @@ export async function estructurarApuntes(
       }
 
       if (tieneImagenes && tieneTexto) {
+        const faltaGemini = !obtenerClaveGemini();
         avisos.push(
-          esErrorSinCuotaIA(e)
-            ? "IA sin crédito: no se analizaron las capturas. Borrador solo con texto de PDF/Word."
-            : `No se analizaron imágenes (${mensaje}). Borrador solo con texto extraído.`
+          faltaGemini && esErrorSinCuotaIA(e)
+            ? "No se analizaron capturas: añade GEMINI_API_KEY en Vercel (Google AI Studio, plan gratuito) y redeploy."
+            : esErrorSinCuotaIA(e)
+              ? "OpenAI sin crédito y Gemini no disponible. Borrador solo con texto de PDF/Word."
+              : `No se analizaron imágenes (${mensaje}). Borrador solo con texto extraído.`
         );
       } else {
         avisos.push(

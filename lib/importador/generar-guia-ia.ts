@@ -1,8 +1,5 @@
 import type { ImagenParaIA } from "@/lib/importador/tipos";
-import {
-  obtenerClaveGemini,
-  proveedorIADisponible,
-} from "@/lib/importador/guia-ia-compartido";
+import { obtenerClaveGemini } from "@/lib/importador/guia-ia-compartido";
 import { generarGuiaConGemini } from "@/lib/importador/parser-gemini";
 import { generarGuiaConOpenAI } from "@/lib/importador/parser-ia";
 
@@ -13,14 +10,9 @@ export async function generarGuiaConProveedor(
   imagenes: ImagenParaIA[] = [],
   preferido?: ProveedorIA
 ) {
+  // Siempre Gemini primero (tiene plan gratuito); OpenAI solo como respaldo.
   const orden: ProveedorIA[] =
-    preferido === "openai"
-      ? ["openai", "gemini"]
-      : preferido === "gemini"
-        ? ["gemini", "openai"]
-        : proveedorIADisponible() === "openai"
-          ? ["openai", "gemini"]
-          : ["gemini", "openai"];
+    preferido === "openai" ? ["openai", "gemini"] : ["gemini", "openai"];
 
   let ultimoError: unknown;
 
