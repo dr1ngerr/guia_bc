@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { crearClienteSupabase } from "@/lib/supabase/cliente";
 import type { ProgresoUsuario } from "@/lib/supabase/tipos";
 
 export function useProgreso(idProceso: string) {
-  const supabase = crearClienteSupabase();
+  const supabase = useMemo(() => crearClienteSupabase(), []);
 
   const obtener = useCallback(async (): Promise<ProgresoUsuario | null> => {
     const {

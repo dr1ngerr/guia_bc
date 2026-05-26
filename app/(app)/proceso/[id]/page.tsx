@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { notFound, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Pencil, Printer } from "lucide-react";
 import { useProceso } from "@/hooks/useProceso";
@@ -172,11 +172,7 @@ export default function ProcesoGuiaPage() {
   }
 
   if (error || !proceso) {
-    return (
-      <p className="p-8 text-destructive">
-        {error ?? "No se pudo cargar el proceso"}
-      </p>
-    );
+    notFound();
   }
 
   if (completado) {

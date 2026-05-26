@@ -15,9 +15,16 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Guías de Procesos Internos",
+  title: {
+    default: "Guías de Procesos Internos",
+    template: "%s · Guías de Procesos",
+  },
   description:
     "Asistente profesional de guías de procesos para personal administrativo",
+  robots: { index: false, follow: false },
+  metadataBase: process.env.VERCEL_URL
+    ? new URL(`https://${process.env.VERCEL_URL}`)
+    : undefined,
 };
 
 export default function RootLayout({

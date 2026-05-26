@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 export function LayoutApp({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { perfil, esAdmin } = usePerfil();
+  const { perfil, esAdmin, cargando: cargandoPerfil } = usePerfil();
 
   const cerrarSesion = async () => {
     const supabase = crearClienteSupabase();
@@ -65,8 +65,8 @@ export function LayoutApp({ children }: { children: React.ReactNode }) {
                 </Link>
               </Button>
             )}
-            {perfil && (
-              <span className="hidden sm:inline text-sm text-muted-foreground px-2">
+            {!cargandoPerfil && perfil && (
+              <span className="hidden sm:inline text-sm text-muted-foreground px-2 truncate max-w-[180px]">
                 {perfil.nombre ?? perfil.email}
               </span>
             )}
