@@ -7,11 +7,16 @@ export async function GET() {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+  const iaGemini = !!(
+    process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  );
+
   const resultado: Record<string, unknown> = {
-    iaGemini: !!(
-      process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY
-    ),
+    iaGemini,
     proveedorIA: "gemini",
+    iaGeminiAyuda: iaGemini
+      ? "GEMINI_API_KEY detectada en el servidor."
+      : "Falta GEMINI_API_KEY en Vercel. Settings → Environment Variables → nombre exacto GEMINI_API_KEY → marcar Production → Save → Deployments → Redeploy.",
     urlConfigurada: !!url,
     claveConfigurada: !!key,
     tipoClave: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
