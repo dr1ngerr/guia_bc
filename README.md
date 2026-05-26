@@ -129,7 +129,19 @@ O invítalo desde **Configuración** en la app (solo si ya eres admin).
 | `/proceso/[id]` | Vista de guía (ejecución) |
 | `/proceso/[id]/editar` | Editor (solo admin) |
 | `/proceso/nuevo` | Asistente de creación |
+| `/proceso/importar` | Convertir apuntes en guía (admin) |
 | `/configuracion` | Empresa, categorías, usuarios |
+
+### Importar apuntes de tu compañera (IA + visión)
+
+1. Como admin, ve a **Importar apuntes**.
+2. Sube **capturas de pantalla**, PDF o Word (.docx) — varias a la vez.
+3. Opcional: texto extra en el cuadro inferior.
+4. **Generar guía con IA** → vista previa → **Crear guía y abrir editor**.
+5. Añade capturas anotadas en el editor y publica.
+
+Requiere `OPENAI_API_KEY` (local y Vercel). Las imágenes usan GPT-4o visión.
+Los vídeos no se importan automáticamente por ahora.
 
 ## Estructura
 

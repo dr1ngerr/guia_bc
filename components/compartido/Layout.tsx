@@ -7,6 +7,7 @@ import {
   LogOut,
   Settings,
   Plus,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { crearClienteSupabase } from "@/lib/supabase/cliente";
@@ -38,9 +39,17 @@ export function LayoutApp({ children }: { children: React.ReactNode }) {
           <nav className="flex items-center gap-2">
             {esAdmin && (
               <Button variant="outline" size="sm" asChild>
+                <Link href="/proceso/importar">
+                  <Sparkles className="h-4 w-4 mr-1" />
+                  Importar apuntes
+                </Link>
+              </Button>
+            )}
+            {esAdmin && (
+              <Button variant="outline" size="sm" asChild>
                 <Link href="/proceso/nuevo">
                   <Plus className="h-4 w-4 mr-1" />
-                  Nuevo proceso
+                  Nuevo
                 </Link>
               </Button>
             )}

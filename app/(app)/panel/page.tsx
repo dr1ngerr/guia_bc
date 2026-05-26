@@ -106,9 +106,14 @@ export default function PanelPage() {
           </p>
         </div>
         {esAdmin && (
-          <Button asChild>
-            <Link href="/proceso/nuevo">Nuevo proceso</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/proceso/importar">Importar apuntes</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/proceso/nuevo">Nuevo proceso</Link>
+            </Button>
+          </div>
         )}
       </div>
 
