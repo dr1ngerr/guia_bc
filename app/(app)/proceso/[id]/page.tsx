@@ -22,11 +22,13 @@ export default function ProcesoGuiaPage() {
   const { proceso, cargando, error } = useProceso(id);
   const { obtener, guardar } = useProgreso(id);
   const { esAdmin } = usePerfil();
+  const printAll = searchParams.get("print") === "all";
 
   const {
     pasoActual,
     pasosCompletados,
     verificacionPasoActual,
+    verificacionesMarcadas,
     completado,
     setProceso,
     setPasoActual,
@@ -73,6 +75,13 @@ export default function ProcesoGuiaPage() {
   ]);
 
   useEffect(() => () => reset(), [reset]);
+
+  useEffect(() => {
+    if (!printAll || completado) return;
+    // Esperamos a que el contenido esté renderizado para que el PDF tenga todo.
+    const t = window.setTimeout(() => window.print(), 600);
+    return () => window.clearTimeout(t);
+  }, [printAll, completado]);
 
   const persistir = useCallback(async () => {
     const state = useGuiaStore.getState();
@@ -219,34 +228,77 @@ export default function ProcesoGuiaPage() {
                   </Link>
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.print()}
-              >
-                <Printer className="h-4 w-4 mr-1" />
-                Imprimir / PDF
-              </Button>
+              {!printAll && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.print()}
+                  >
+                    <Printer className="h-4 w-4 mr-1" />
+                    Imprimir paso / PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push(`/proceso/${id}?print=all`)}
+                  >
+                    <Printer className="h-4 w-4 mr-1" />
+                    Imprimir todo / PDF
+                  </Button>
+                </>
+              )}
             </div>
           </div>
           <BarraProgreso actual={pasoActual} total={total} />
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          {paso && (
-            <PanelPaso
-              paso={paso}
-              indice={pasoActual}
-              verificacionMarcada={verificacionPasoActual}
-              onVerificacionChange={(marcada) => {
-                if (marcada) {
-                  marcarVerificacion(paso.id);
-                } else {
-                  setVerificacionPasoActual(false);
-                }
-                persistir();
-              }}
-            />
+        <div
+          className={
+            printAll
+              ? "flex-1 overflow-y-auto p-0 md:p-0"
+              : "flex-1 overflow-y-auto p-4 md:p-8"
+          }
+        >
+          {printAll ? (
+            <div className="space-y-8">
+              <header className="px-4">
+                <h1 className="text-3xl font-bold leading-tight">
+                  {proceso.nombre}
+                </h1>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {proceso.herramienta}
+                </p>
+              </header>
+              {proceso.pasos.map((p, i) => (
+                <PanelPaso
+                  key={p.id}
+                  paso={p}
+                  indice={i}
+                  verificacionMarcada={verificacionesMarcadas.includes(p.id)}
+                  onVerificacionChange={(marcada) => {
+                    // En impresión no persistimos cambios.
+                    void marcada;
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            paso && (
+              <PanelPaso
+                paso={paso}
+                indice={pasoActual}
+                verificacionMarcada={verificacionPasoActual}
+                onVerificacionChange={(marcada) => {
+                  if (marcada) {
+                    marcarVerificacion(paso.id);
+                  } else {
+                    setVerificacionPasoActual(false);
+                  }
+                  persistir();
+                }}
+              />
+            )
           )}
         </div>
 

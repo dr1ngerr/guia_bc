@@ -89,8 +89,10 @@ function ItemPasoSortable({
 
 export function ListaPasos({
   onAgregar,
+  onReordenar,
 }: {
   onAgregar: () => void;
+  onReordenar?: () => void;
 }) {
   const pasos = useEditorStore((s) => s.pasos);
   const pasoSeleccionadoId = useEditorStore((s) => s.pasoSeleccionadoId);
@@ -111,6 +113,8 @@ export function ListaPasos({
     const oldIndex = pasos.findIndex((p) => p.id === active.id);
     const newIndex = pasos.findIndex((p) => p.id === over.id);
     reordenarPasos(arrayMove(pasos, oldIndex, newIndex));
+    // Guardamos el nuevo orden al soltar para que no se pierda si el usuario sale rápido.
+    onReordenar?.();
   };
 
   return (

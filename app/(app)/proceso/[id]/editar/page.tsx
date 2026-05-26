@@ -11,6 +11,7 @@ import { usePerfil } from "@/hooks/usePerfil";
 import { ListaPasos } from "@/components/editor/ListaPasos";
 import { EditorPaso } from "@/components/editor/EditorPaso";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 export default function EditarProcesoPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,16 +50,18 @@ export default function EditarProcesoPage() {
   }, [proceso, setProceso, setPasos, reset]);
 
   const guardarTodo = useCallback(async () => {
-    if (!procesoEditor) return;
+    const { proceso: procesoActual, pasos: pasosActuales } =
+      useEditorStore.getState();
+    if (!procesoActual) return;
     const supabase = crearClienteSupabase();
     setGuardando(true);
 
-    for (const paso of pasos) {
+    for (const paso of pasosActuales) {
       const { error } = await supabase
         .from("pasos")
         .upsert({
           id: paso.id,
-          id_proceso: procesoEditor.id,
+          id_proceso: procesoActual.id,
           orden: paso.orden,
           titulo: paso.titulo,
           descripcion: paso.descripcion,
@@ -74,13 +77,16 @@ export default function EditarProcesoPage() {
 
     await supabase
       .from("procesos")
-      .update({ actualizado_en: new Date().toISOString() })
-      .eq("id", procesoEditor.id);
+      .update({
+        nombre: procesoActual.nombre,
+        actualizado_en: new Date().toISOString(),
+      })
+      .eq("id", procesoActual.id);
 
     setSucio(false);
     setUltimoGuardado(new Date());
     setGuardando(false);
-  }, [procesoEditor, pasos, setGuardando, setSucio, setUltimoGuardado]);
+  }, [setGuardando, setSucio, setUltimoGuardado]);
 
   useGuardadoAutomatico(guardarTodo);
 
@@ -141,7 +147,17 @@ export default function EditarProcesoPage() {
     <div className="flex flex-col h-[calc(100vh-3.5rem)]">
       <header className="border-b px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-semibold">{proceso.nombre}</h1>
+          <Input
+            className="font-semibold text-lg w-full max-w-[520px]"
+            value={procesoEditor?.nombre ?? ""}
+            onChange={(e) => {
+              const nombreNuevo = e.target.value;
+              if (!procesoEditor) return;
+              setProceso({ ...procesoEditor, nombre: nombreNuevo });
+              setSucio(true);
+            }}
+            aria-label="Título de la guía"
+          />
           <p className="text-xs text-muted-foreground">
             {guardando
               ? "Guardando…"
@@ -174,7 +190,7 @@ export default function EditarProcesoPage() {
 
       <div className="flex flex-1 min-h-0">
         <div className="w-64 shrink-0 border-r p-3 overflow-hidden flex flex-col">
-          <ListaPasos onAgregar={agregarPaso} />
+          <ListaPasos onAgregar={agregarPaso} onReordenar={guardarTodo} />
         </div>
         <div className="flex-1 min-w-0 overflow-hidden">
           <EditorPaso onRecargarCapturas={recargar} />

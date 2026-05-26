@@ -83,6 +83,9 @@
 }
 
 /* Impresión / PDF */
+.imprimir-solo {
+  display: none !important;
+}
 @media print {
   .no-imprimir {
     display: none !important;
@@ -97,6 +100,7 @@
   .guia-paso {
     break-inside: avoid;
     page-break-inside: avoid;
+    max-width: none !important;
     margin-bottom: 2rem;
   }
 }
