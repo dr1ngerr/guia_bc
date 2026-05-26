@@ -28,11 +28,17 @@ export default function PanelPage() {
   const { esAdmin, cargando: cargandoPerfil } = usePerfil();
   const [procesos, setProcesos] = useState<ProcesoConConteo[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
+  const [busquedaInput, setBusquedaInput] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [herramienta, setHerramienta] = useState<string>("todas");
   const [categoria, setCategoria] = useState<string>("todas");
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setBusqueda(busquedaInput), 250);
+    return () => clearTimeout(t);
+  }, [busquedaInput]);
 
   useEffect(() => {
     if (cargandoPerfil) return;
@@ -175,8 +181,8 @@ export default function PanelPage() {
           <Input
             placeholder="Buscar procesos…"
             className="pl-9"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
+            value={busquedaInput}
+            onChange={(e) => setBusquedaInput(e.target.value)}
             disabled={mostrarCargando}
           />
         </div>

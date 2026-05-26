@@ -1,9 +1,13 @@
 import { generarGuiaHeuristica } from "@/lib/importador/parser-heuristico";
-import { generarGuiaConIA } from "@/lib/importador/parser-ia";
+import { generarGuiaConProveedor } from "@/lib/importador/generar-guia-ia";
 import {
-  esErrorSinCuotaOpenAI,
-  formatearErrorOpenAI,
-} from "@/lib/importador/errores-openai";
+  esErrorSinCuotaIA,
+  formatearErrorIA,
+} from "@/lib/importador/errores-ia";
+import {
+  obtenerClaveGemini,
+  proveedorIADisponible,
+} from "@/lib/importador/guia-ia-compartido";
 import type { ContenidoImportado, ResultadoGeneracion } from "@/lib/importador/tipos";
 
 export async function estructurarApuntes(
@@ -28,26 +32,31 @@ export async function estructurarApuntes(
     );
   }
 
-  if (tieneImagenes && !process.env.OPENAI_API_KEY) {
+  const hayIA = proveedorIADisponible() !== null;
+
+  if (tieneImagenes && !hayIA) {
     throw new Error(
-      "Para importar imágenes necesitas OPENAI_API_KEY configurada (visión con IA)."
+      "Para importar imágenes configura GEMINI_API_KEY o OPENAI_API_KEY en Vercel."
     );
   }
 
-  if (preferirIA && process.env.OPENAI_API_KEY) {
+  if (preferirIA && hayIA) {
     try {
-      const { guia, usoVision } = await generarGuiaConIA(
+      const { guia, usoVision, proveedor } = await generarGuiaConProveedor(
         textoCombinado,
         imagenes
       );
 
+      const nombreProveedor =
+        proveedor === "gemini" ? "Gemini" : "OpenAI";
+
       if (usoVision) {
         avisos.push(
-          `Analizadas ${imagenes.length} imagen(es) con IA (GPT-4o visión). Revisa cada paso antes de publicar.`
+          `Analizadas ${imagenes.length} imagen(es) con ${nombreProveedor}. Revisa cada paso antes de publicar.`
         );
       } else {
         avisos.push(
-          "Guía generada con IA a partir del texto. Revisa antes de publicar."
+          `Guía generada con ${nombreProveedor} a partir del texto. Revisa antes de publicar.`
         );
       }
 
@@ -62,32 +71,33 @@ export async function estructurarApuntes(
         fuentes,
       };
     } catch (e) {
-      const mensaje = formatearErrorOpenAI(e);
+      const mensaje = formatearErrorIA(e);
 
-      // Solo imágenes: hace falta visión con OpenAI y crédito activo
       if (tieneImagenes && !tieneTexto) {
         throw new Error(mensaje);
       }
 
       if (tieneImagenes && tieneTexto) {
         avisos.push(
-          esErrorSinCuotaOpenAI(e)
-            ? "OpenAI sin crédito: no se analizaron las capturas. Se generó un borrador solo con el texto de PDF/Word."
-            : `No se pudieron analizar las imágenes (${mensaje}). Borrador generado solo con texto extraído.`
+          esErrorSinCuotaIA(e)
+            ? "IA sin crédito: no se analizaron las capturas. Borrador solo con texto de PDF/Word."
+            : `No se analizaron imágenes (${mensaje}). Borrador solo con texto extraído.`
         );
       } else {
         avisos.push(
-          esErrorSinCuotaOpenAI(e)
-            ? "OpenAI sin crédito. Se usó el analizador automático (sin IA)."
-            : `IA no disponible. Se usó el analizador automático.`
+          esErrorSinCuotaIA(e)
+            ? "IA sin crédito. Se usó el analizador automático."
+            : "IA no disponible. Se usó el analizador automático."
         );
       }
     }
   } else if (tieneImagenes) {
-    throw new Error("OPENAI_API_KEY requerida para procesar imágenes.");
-  } else if (preferirIA && !process.env.OPENAI_API_KEY) {
+    throw new Error(
+      "GEMINI_API_KEY u OPENAI_API_KEY requerida para procesar imágenes."
+    );
+  } else if (preferirIA && !hayIA) {
     avisos.push(
-      "Añade OPENAI_API_KEY para mejores resultados. Usando analizador automático."
+      "Añade GEMINI_API_KEY u OPENAI_API_KEY en Vercel. Usando analizador automático."
     );
   }
 
@@ -97,4 +107,13 @@ export async function estructurarApuntes(
 
   const guia = generarGuiaHeuristica(textoCombinado, avisos);
   return { guia, metodo: "heuristica", avisos, fuentes };
+}
+
+/** Para diagnóstico */
+export function iaConfigurada(): boolean {
+  return proveedorIADisponible() !== null;
+}
+
+export function geminiConfigurada(): boolean {
+  return Boolean(obtenerClaveGemini());
 }

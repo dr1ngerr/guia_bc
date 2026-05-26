@@ -1,14 +1,18 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { FileImage, FileText, X, Upload } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FileText, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const ACEPTADOS =
   ".png,.jpg,.jpeg,.webp,.gif,.pdf,.docx,.txt,.md,.csv,image/*,application/pdf";
 
-export function ZonaSubidaArchivos({
+function claveArchivo(f: File) {
+  return `${f.name}-${f.size}-${f.lastModified}`;
+}
+
+function ZonaSubidaArchivosInner({
   archivos,
   onChange,
 }: {
@@ -17,13 +21,27 @@ export function ZonaSubidaArchivos({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [arrastrando, setArrastrando] = useState(false);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const urls: Record<string, string> = {};
+    for (const f of archivos) {
+      if (f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif)$/i.test(f.name)) {
+        urls[claveArchivo(f)] = URL.createObjectURL(f);
+      }
+    }
+    setPreviews(urls);
+    return () => {
+      Object.values(urls).forEach(URL.revokeObjectURL);
+    };
+  }, [archivos]);
 
   const agregar = useCallback(
     (nuevos: FileList | File[]) => {
       const lista = Array.from(nuevos);
       const combinados = [...archivos];
       for (const f of lista) {
-        if (!combinados.some((a) => a.name === f.name && a.size === f.size)) {
+        if (!combinados.some((a) => claveArchivo(a) === claveArchivo(f))) {
           combinados.push(f);
         }
       }
@@ -32,14 +50,23 @@ export function ZonaSubidaArchivos({
     [archivos, onChange]
   );
 
-  const quitar = (indice: number) => {
-    onChange(archivos.filter((_, i) => i !== indice));
-  };
+  const quitar = useCallback(
+    (indice: number) => {
+      onChange(archivos.filter((_, i) => i !== indice));
+    },
+    [archivos, onChange]
+  );
 
-  const icono = (f: File) => {
-    if (f.type.startsWith("image/")) return FileImage;
-    return FileText;
-  };
+  const listaArchivos = useMemo(
+    () =>
+      archivos.map((f, i) => {
+        const key = claveArchivo(f);
+        const esImagen =
+          f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif)$/i.test(f.name);
+        return { f, i, key, esImagen, preview: previews[key] };
+      }),
+    [archivos, previews]
+  );
 
   return (
     <div className="space-y-3">
@@ -88,47 +115,47 @@ export function ZonaSubidaArchivos({
         }}
       />
 
-      {archivos.length > 0 && (
+      {listaArchivos.length > 0 && (
         <ul className="space-y-2">
-          {archivos.map((f, i) => {
-            const Icono = icono(f);
-            const esImagen = f.type.startsWith("image/");
-            return (
-              <li
-                key={`${f.name}-${i}`}
-                className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm"
+          {listaArchivos.map(({ f, i, esImagen, preview }) => (
+            <li
+              key={claveArchivo(f)}
+              className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm"
+            >
+              {esImagen && preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={preview}
+                  alt=""
+                  className="h-12 w-12 object-cover rounded shrink-0"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <FileText className="h-8 w-8 text-muted-foreground shrink-0" />
+              )}
+              <span className="flex-1 truncate">{f.name}</span>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {(f.size / 1024).toFixed(0)} KB
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  quitar(i);
+                }}
               >
-                {esImagen ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={URL.createObjectURL(f)}
-                    alt=""
-                    className="h-12 w-12 object-cover rounded shrink-0"
-                  />
-                ) : (
-                  <Icono className="h-8 w-8 text-muted-foreground shrink-0" />
-                )}
-                <span className="flex-1 truncate">{f.name}</span>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {(f.size / 1024).toFixed(0)} KB
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    quitar(i);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </li>
-            );
-          })}
+                <X className="h-4 w-4" />
+              </Button>
+            </li>
+          ))}
         </ul>
       )}
     </div>
   );
 }
+
+export const ZonaSubidaArchivos = memo(ZonaSubidaArchivosInner);

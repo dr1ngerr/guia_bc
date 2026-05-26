@@ -8,6 +8,10 @@ export async function GET() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   const resultado: Record<string, unknown> = {
+    iaGemini: !!(
+      process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY
+    ),
+    iaOpenAI: !!process.env.OPENAI_API_KEY,
     urlConfigurada: !!url,
     claveConfigurada: !!key,
     tipoClave: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY

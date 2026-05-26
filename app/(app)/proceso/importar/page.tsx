@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles, ArrowLeft } from "lucide-react";
 import { usePerfil } from "@/hooks/usePerfil";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -16,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { VistaPreviaGuia } from "@/components/importador/VistaPreviaGuia";
 import { ZonaSubidaArchivos } from "@/components/importador/ZonaSubidaArchivos";
+import { CuadroApuntes } from "@/components/importador/CuadroApuntes";
 import type { ResultadoGeneracion } from "@/lib/importador/tipos";
 import {
   parsearRespuestaApi,
@@ -26,20 +26,25 @@ import { toast } from "@/hooks/use-toast";
 export default function ImportarApuntesPage() {
   const router = useRouter();
   const { esAdmin, cargando: cargandoPerfil } = usePerfil();
-  const [apuntes, setApuntes] = useState("");
+  const textoRef = useRef<HTMLTextAreaElement>(null);
   const [archivos, setArchivos] = useState<File[]>([]);
+  const [textoSuficiente, setTextoSuficiente] = useState(false);
   const [generando, setGenerando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoGeneracion | null>(null);
+
+  const onArchivosChange = useCallback((files: File[]) => {
+    setArchivos(files);
+  }, []);
 
   useEffect(() => {
     if (!cargandoPerfil && !esAdmin) router.replace("/panel");
   }, [esAdmin, cargandoPerfil, router]);
 
-  const puedeGenerar =
-    archivos.length > 0 || apuntes.trim().length >= 15;
+  const puedeGenerar = archivos.length > 0 || textoSuficiente;
 
   const generar = async () => {
+    const apuntes = textoRef.current?.value ?? "";
     setGenerando(true);
     setResultado(null);
     try {
@@ -79,8 +84,9 @@ export default function ImportarApuntesPage() {
       toast({
         title:
           descripcion.includes("crédito") ||
-          descripcion.includes("platform.openai.com")
-            ? "OpenAI sin crédito"
+          descripcion.includes("platform.openai.com") ||
+          descripcion.includes("GEMINI")
+            ? "IA sin crédito"
             : "Error",
         description: descripcion,
         variant: "destructive",
@@ -133,10 +139,8 @@ export default function ImportarApuntesPage() {
           Importar con IA
         </h1>
         <p className="text-muted-foreground mt-1">
-          Sube capturas de pantalla, PDF o Word de los apuntes de tu compañera. La
-          IA los convierte en una guía profesional con pasos, alertas y
-          verificaciones. Las imágenes se optimizan automáticamente (máx. ~3,5 MB
-          en total). Después añades capturas finales en el editor.
+          Sube capturas, PDF o Word. La IA (Gemini u OpenAI) genera la guía. Las
+          imágenes se optimizan al subir (máx. ~3,5 MB).
         </p>
       </div>
 
@@ -147,11 +151,13 @@ export default function ImportarApuntesPage() {
               <CardTitle>Archivos e imágenes</CardTitle>
               <CardDescription>
                 Ideal: capturas del proceso en Business Central, Excel o correo.
-                También PDF y documentos Word.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ZonaSubidaArchivos archivos={archivos} onChange={setArchivos} />
+              <ZonaSubidaArchivos
+                archivos={archivos}
+                onChange={onArchivosChange}
+              />
             </CardContent>
           </Card>
 
@@ -163,11 +169,10 @@ export default function ImportarApuntesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Ej: Este proceso es mensual. Contacto dudas: María ext. 234"
-                className="min-h-[100px] text-sm"
-                value={apuntes}
-                onChange={(e) => setApuntes(e.target.value)}
+              <CuadroApuntes
+                textoRef={textoRef}
+                onSuficienteChange={setTextoSuficiente}
+                disabled={generando}
               />
               <Button
                 className="w-full sm:w-auto"
@@ -211,10 +216,6 @@ export default function ImportarApuntesPage() {
               Volver a importar
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            En el editor podrás subir capturas definitivas con anotaciones. Los
-            vídeos no se importan automáticamente (próximamente).
-          </p>
         </div>
       )}
     </div>
