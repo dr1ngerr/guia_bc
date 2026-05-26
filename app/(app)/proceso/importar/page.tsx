@@ -22,6 +22,7 @@ import {
   prepararArchivosParaSubida,
 } from "@/lib/importador/preparar-archivos-cliente";
 import { toast } from "@/hooks/use-toast";
+import { ocrImagenesParaTexto } from "@/lib/importador/ocr-cdn";
 
 export default function ImportarApuntesPage() {
   const router = useRouter();
@@ -56,8 +57,45 @@ export default function ImportarApuntesPage() {
     setGenerando(true);
     setResultado(null);
     try {
+      const imagenes = archivos.filter(
+        (f) =>
+          f.type.startsWith("image/") ||
+          /\.(jpe?g|png|webp|gif)$/i.test(f.name)
+      );
+
+      // Respaldo sin créditos:
+      // si Gemini no está activo en Vercel, hacemos OCR en el navegador y
+      // enviamos solo texto (sin imágenes al servidor).
+      let apuntesFinal = apuntes;
+      let archivosParaEnviar = archivos;
+      let usarIA = true;
+
+      if (iaGeminiActiva === false && imagenes.length > 0) {
+        toast({
+          title: "Gemini no disponible",
+          description: "Extrayendo texto con OCR (sin créditos)…",
+        });
+
+        const textoOCR = await ocrImagenesParaTexto(archivos, {
+          maxImagenes: 4,
+          logger: (m) => void m,
+        });
+
+        if (!textoOCR.trim()) {
+          throw new Error(
+            "No se pudo extraer texto de las capturas con OCR. Prueba con imágenes más nítidas o añade texto en 'Texto adicional'."
+          );
+        }
+
+        apuntesFinal = `${apuntesFinal.trim() ? apuntesFinal.trim() + "\n\n" : ""}--- OCR ---\n${textoOCR}`;
+        archivosParaEnviar = archivos.filter(
+          (f) => !(f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif)$/i.test(f.name))
+        );
+        usarIA = false; // forzamos heurística; evitamos pasar imágenes sin Gemini
+      }
+
       const { archivos: listos, avisos: avisosPrep } =
-        await prepararArchivosParaSubida(archivos);
+        await prepararArchivosParaSubida(archivosParaEnviar);
 
       if (avisosPrep.length > 0) {
         toast({
@@ -67,8 +105,8 @@ export default function ImportarApuntesPage() {
       }
 
       const formData = new FormData();
-      formData.append("apuntes", apuntes);
-      formData.append("usarIA", "true");
+      formData.append("apuntes", apuntesFinal);
+      formData.append("usarIA", usarIA ? "true" : "false");
       listos.forEach((f) => formData.append("archivos", f));
 
       const res = await fetch("/api/proceso/importar/generar", {

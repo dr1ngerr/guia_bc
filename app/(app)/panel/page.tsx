@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { usePerfil } from "@/hooks/usePerfil";
 import { calcularPorcentajeProgreso } from "@/lib/progreso";
 import { HERRAMIENTAS, type Herramienta, type Proceso } from "@/lib/supabase/tipos";
+import { toast } from "@/hooks/use-toast";
 
 type ProcesoConConteo = Proceso & {
   num_pasos: number;
@@ -154,6 +155,27 @@ export default function PanelPage() {
 
   const mostrarCargando = cargandoPerfil || cargando;
 
+  const eliminarProceso = async (id: string) => {
+    if (!esAdmin) return;
+    const ok = window.confirm("¿Eliminar esta guía? Esta acción no se puede deshacer.");
+    if (!ok) return;
+
+    try {
+      const res = await fetch(`/api/admin/procesos/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(String(data.error ?? "Error al eliminar"));
+
+      setProcesos((prev) => prev.filter((p) => p.id !== id));
+      toast({ title: "Guía eliminada" });
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: e instanceof Error ? e.message : "No se pudo eliminar",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -273,6 +295,8 @@ export default function PanelPage() {
                 porcentajeProgreso: p.porcentajeProgreso,
               }}
               mostrarEstado={esAdmin}
+              mostrarEliminar={esAdmin}
+              onEliminar={eliminarProceso}
             />
           ))}
         </div>

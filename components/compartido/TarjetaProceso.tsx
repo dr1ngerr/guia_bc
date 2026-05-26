@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { CheckCircle2, Clock, ListOrdered } from "lucide-react";
+import { CheckCircle2, Clock, ListOrdered, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { EtiquetaHerramienta } from "@/components/compartido/EtiquetaHerramienta";
 import { formatearDuracion, formatearFecha } from "@/lib/utils";
 import type { EstadoProceso, Herramienta } from "@/lib/supabase/tipos";
+import { Button } from "@/components/ui/button";
 
 export interface DatosTarjetaProceso {
   id: string;
@@ -23,9 +24,13 @@ export interface DatosTarjetaProceso {
 export function TarjetaProceso({
   proceso,
   mostrarEstado = false,
+  mostrarEliminar = false,
+  onEliminar,
 }: {
   proceso: DatosTarjetaProceso;
   mostrarEstado?: boolean;
+  mostrarEliminar?: boolean;
+  onEliminar?: (id: string) => void;
 }) {
   const completado = proceso.porcentajeProgreso === 100;
   const enCurso =
@@ -47,6 +52,22 @@ export function TarjetaProceso({
                 <Badge variant="secondary" className="text-xs">
                   Borrador
                 </Badge>
+              )}
+              {mostrarEliminar && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEliminar?.(proceso.id);
+                  }}
+                  aria-label={`Eliminar ${proceso.nombre}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               )}
             </div>
           </div>

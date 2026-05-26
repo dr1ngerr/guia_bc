@@ -43,6 +43,9 @@ export default function ConfiguracionPage() {
   >([]);
   const [emailInvitar, setEmailInvitar] = useState("");
   const [rolInvitar, setRolInvitar] = useState<RolUsuario>("empleado");
+  const [usuarioActualId, setUsuarioActualId] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (!cargando && !esAdmin) router.replace("/panel");
@@ -50,6 +53,11 @@ export default function ConfiguracionPage() {
 
   const cargar = async () => {
     const supabase = crearClienteSupabase();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    setUsuarioActualId(user?.id ?? null);
 
     const { data: emp } = await supabase.from("empresa").select("*").limit(1).single();
     if (emp) {
@@ -135,6 +143,39 @@ export default function ConfiguracionPage() {
     await supabase.from("perfiles").update({ rol }).eq("id", id);
     cargar();
     toast({ title: "Rol actualizado" });
+  };
+
+  const eliminarUsuario = async (id: string) => {
+    if (!esAdmin) return;
+    if (!id) return;
+    if (usuarioActualId && id === usuarioActualId) {
+      toast({
+        title: "Acción no permitida",
+        description: "No puedes eliminar tu propia cuenta desde aquí.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const ok = window.confirm(
+      "¿Eliminar este usuario del sistema? Se eliminarán sus datos relacionados."
+    );
+    if (!ok) return;
+
+    try {
+      const res = await fetch(`/api/admin/usuarios/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(String(data.error ?? "Error al eliminar"));
+
+      toast({ title: "Usuario eliminado" });
+      cargar();
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: e instanceof Error ? e.message : "No se pudo eliminar",
+        variant: "destructive",
+      });
+    }
   };
 
   if (cargando) return <p className="p-8">Cargando…</p>;
@@ -257,18 +298,32 @@ export default function ConfiguracionPage() {
                   <p className="font-medium">{u.nombre ?? u.email}</p>
                   <p className="text-xs text-muted-foreground">{u.email}</p>
                 </div>
-                <Select
-                  value={u.rol}
-                  onValueChange={(v) => cambiarRol(u.id, v as RolUsuario)}
-                >
-                  <SelectTrigger className="w-36">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="empleado">Empleado</SelectItem>
-                    <SelectItem value="administrador">Administrador</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={u.rol}
+                    onValueChange={(v) => cambiarRol(u.id, v as RolUsuario)}
+                  >
+                    <SelectTrigger className="w-36">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="empleado">Empleado</SelectItem>
+                      <SelectItem value="administrador">Administrador</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-destructive hover:text-destructive"
+                    disabled={usuarioActualId ? usuarioActualId === u.id : false}
+                    onClick={() => eliminarUsuario(u.id)}
+                    aria-label={`Eliminar usuario ${u.email}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
