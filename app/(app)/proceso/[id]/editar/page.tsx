@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { crearClienteSupabase } from "@/lib/supabase/cliente";
@@ -8,16 +8,24 @@ import { useProceso } from "@/hooks/useProceso";
 import { useEditorStore } from "@/lib/store/useEditorStore";
 import { useGuardadoAutomatico } from "@/hooks/useGuardadoAutomatico";
 import { usePerfil } from "@/hooks/usePerfil";
+import { useCapturasPaso } from "@/hooks/useCapturasPaso";
 import { ListaPasos } from "@/components/editor/ListaPasos";
 import { EditorPaso } from "@/components/editor/EditorPaso";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import {
+  eliminarPasoCompleto,
+  guardarPasosEditor,
+} from "@/lib/pasos/operaciones";
+
 export default function EditarProcesoPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { proceso, cargando, recargar } = useProceso(id);
+  const { proceso, cargando } = useProceso(id);
   const { esAdmin, cargando: cargandoPerfil } = usePerfil();
+  const { recargarCapturas } = useCapturasPaso();
+  const [eliminandoPaso, setEliminandoPaso] = useState(false);
 
   const {
     setProceso,
@@ -30,6 +38,8 @@ export default function EditarProcesoPage() {
     setSucio,
     setUltimoGuardado,
     reset,
+    eliminarPaso,
+    agregarPaso,
   } = useEditorStore();
 
   useEffect(() => {
@@ -56,36 +66,24 @@ export default function EditarProcesoPage() {
     const supabase = crearClienteSupabase();
     setGuardando(true);
 
-    for (const paso of pasosActuales) {
-      const { error } = await supabase
-        .from("pasos")
-        .upsert({
-          id: paso.id,
-          id_proceso: procesoActual.id,
-          orden: paso.orden,
-          titulo: paso.titulo,
-          descripcion: paso.descripcion,
-          tipo_alerta: paso.tipo_alerta,
-          texto_alerta: paso.texto_alerta,
-          texto_verificacion: paso.texto_verificacion,
-          consejo: paso.consejo,
-          url_video: paso.url_video,
-        });
+    try {
+      await guardarPasosEditor(supabase, procesoActual.id, pasosActuales);
 
-      if (error) throw new Error(error.message);
+      const { error: errProc } = await supabase
+        .from("procesos")
+        .update({
+          nombre: procesoActual.nombre,
+          actualizado_en: new Date().toISOString(),
+        })
+        .eq("id", procesoActual.id);
+
+      if (errProc) throw new Error(errProc.message);
+
+      setSucio(false);
+      setUltimoGuardado(new Date());
+    } finally {
+      setGuardando(false);
     }
-
-    await supabase
-      .from("procesos")
-      .update({
-        nombre: procesoActual.nombre,
-        actualizado_en: new Date().toISOString(),
-      })
-      .eq("id", procesoActual.id);
-
-    setSucio(false);
-    setUltimoGuardado(new Date());
-    setGuardando(false);
   }, [setGuardando, setSucio, setUltimoGuardado]);
 
   useGuardadoAutomatico(guardarTodo);
@@ -94,13 +92,16 @@ export default function EditarProcesoPage() {
     try {
       await guardarTodo();
       const supabase = crearClienteSupabase();
-      await supabase
+      const { error } = await supabase
         .from("procesos")
         .update({ estado, actualizado_en: new Date().toISOString() })
         .eq("id", id);
 
+      if (error) throw new Error(error.message);
+
       toast({
-        title: estado === "publicado" ? "Proceso publicado" : "Guardado como borrador",
+        title:
+          estado === "publicado" ? "Proceso publicado" : "Guardado como borrador",
       });
       if (estado === "publicado") router.push(`/proceso/${id}`);
     } catch (e) {
@@ -112,7 +113,7 @@ export default function EditarProcesoPage() {
     }
   };
 
-  const agregarPaso = async () => {
+  const agregarPasoHandler = async () => {
     const supabase = crearClienteSupabase();
     const orden = pasos.length;
     const { data, error } = await supabase
@@ -127,13 +128,67 @@ export default function EditarProcesoPage() {
       .single();
 
     if (error || !data) {
-      toast({ title: "Error", description: error?.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error?.message,
+        variant: "destructive",
+      });
       return;
     }
 
-    useEditorStore.getState().agregarPaso({ ...data, capturas: [] });
-    recargar();
+    agregarPaso({ ...data, capturas: [] });
+    toast({ title: "Paso añadido" });
   };
+
+  const eliminarPasoHandler = async (idPaso: string) => {
+    if (pasos.length <= 1) {
+      toast({
+        title: "No se puede eliminar",
+        description: "El proceso debe tener al menos un paso.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "¿Eliminar este paso? También se borrarán sus capturas e imágenes."
+      )
+    ) {
+      return;
+    }
+
+    setEliminandoPaso(true);
+    const supabase = crearClienteSupabase();
+
+    try {
+      await eliminarPasoCompleto(supabase, idPaso);
+      eliminarPaso(idPaso);
+      toast({ title: "Paso eliminado" });
+    } catch (e) {
+      toast({
+        title: "Error al eliminar",
+        description: e instanceof Error ? e.message : "Error desconocido",
+        variant: "destructive",
+      });
+    } finally {
+      setEliminandoPaso(false);
+    }
+  };
+
+  const recargarCapturasDelPasoSeleccionado = useCallback(async () => {
+    const pasoId = useEditorStore.getState().pasoSeleccionadoId;
+    if (!pasoId) return;
+    try {
+      await recargarCapturas(pasoId);
+    } catch (e) {
+      toast({
+        title: "Error al actualizar capturas",
+        description: e instanceof Error ? e.message : "Error desconocido",
+        variant: "destructive",
+      });
+    }
+  }, [recargarCapturas]);
 
   if (cargando || cargandoPerfil) {
     return <p className="p-8">Cargando editor…</p>;
@@ -169,17 +224,36 @@ export default function EditarProcesoPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => guardarTodo()}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={guardando}
+            onClick={() =>
+              guardarTodo().catch((e) =>
+                toast({
+                  title: "Error al guardar",
+                  description:
+                    e instanceof Error ? e.message : "Error desconocido",
+                  variant: "destructive",
+                })
+              )
+            }
+          >
             Guardar ahora
           </Button>
           <Button
             variant="secondary"
             size="sm"
+            disabled={guardando}
             onClick={() => publicar("borrador")}
           >
             Borrador
           </Button>
-          <Button size="sm" onClick={() => publicar("publicado")}>
+          <Button
+            size="sm"
+            disabled={guardando}
+            onClick={() => publicar("publicado")}
+          >
             Publicar
           </Button>
           <Button variant="ghost" size="sm" asChild>
@@ -190,10 +264,15 @@ export default function EditarProcesoPage() {
 
       <div className="flex flex-1 min-h-0">
         <div className="w-64 shrink-0 border-r p-3 overflow-hidden flex flex-col">
-          <ListaPasos onAgregar={agregarPaso} onReordenar={guardarTodo} />
+          <ListaPasos
+            onAgregar={agregarPasoHandler}
+            onReordenar={guardarTodo}
+            onEliminar={eliminarPasoHandler}
+            eliminando={eliminandoPaso}
+          />
         </div>
         <div className="flex-1 min-w-0 overflow-hidden">
-          <EditorPaso onRecargarCapturas={recargar} />
+          <EditorPaso onRecargarCapturas={recargarCapturasDelPasoSeleccionado} />
         </div>
       </div>
     </div>

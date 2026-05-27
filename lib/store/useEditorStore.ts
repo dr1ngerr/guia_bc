@@ -18,6 +18,7 @@ interface EditorState {
   agregarPaso: (paso: PasoEditor) => void;
   eliminarPaso: (id: string) => void;
   reordenarPasos: (pasos: PasoEditor[]) => void;
+  actualizarCapturasPaso: (idPaso: string, capturas: Captura[]) => void;
   setSucio: (valor: boolean) => void;
   setGuardando: (valor: boolean) => void;
   setUltimoGuardado: (fecha: Date | null) => void;
@@ -64,6 +65,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pasos: pasos.map((p, i) => ({ ...p, orden: i })),
       sucio: true,
     }),
+  actualizarCapturasPaso: (idPaso, capturas) =>
+    set((s) => ({
+      pasos: s.pasos.map((p) =>
+        p.id === idPaso ? { ...p, capturas } : p
+      ),
+    })),
   setSucio: (valor) => set({ sucio: valor }),
   setGuardando: (valor) => set({ guardando: valor }),
   setUltimoGuardado: (fecha) => set({ ultimoGuardado: fecha }),

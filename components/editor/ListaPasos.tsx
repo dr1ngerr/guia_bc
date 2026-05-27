@@ -27,6 +27,7 @@ function ItemPasoSortable({
   titulo,
   orden,
   seleccionado,
+  deshabilitado,
   onSeleccionar,
   onEliminar,
 }: {
@@ -34,6 +35,7 @@ function ItemPasoSortable({
   titulo: string;
   orden: number;
   seleccionado: boolean;
+  deshabilitado?: boolean;
   onSeleccionar: () => void;
   onEliminar: () => void;
 }) {
@@ -78,6 +80,7 @@ function ItemPasoSortable({
         variant="ghost"
         size="icon"
         className="h-8 w-8 shrink-0"
+        disabled={deshabilitado}
         onClick={onEliminar}
         aria-label="Eliminar paso"
       >
@@ -90,15 +93,18 @@ function ItemPasoSortable({
 export function ListaPasos({
   onAgregar,
   onReordenar,
+  onEliminar,
+  eliminando = false,
 }: {
   onAgregar: () => void;
   onReordenar?: () => void;
+  onEliminar: (id: string) => void | Promise<void>;
+  eliminando?: boolean;
 }) {
   const pasos = useEditorStore((s) => s.pasos);
   const pasoSeleccionadoId = useEditorStore((s) => s.pasoSeleccionadoId);
   const seleccionarPaso = useEditorStore((s) => s.seleccionarPaso);
   const reordenarPasos = useEditorStore((s) => s.reordenarPasos);
-  const eliminarPaso = useEditorStore((s) => s.eliminarPaso);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -121,7 +127,13 @@ export function ListaPasos({
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-sm">Pasos</h3>
-        <Button type="button" size="sm" variant="outline" onClick={onAgregar}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={eliminando}
+          onClick={onAgregar}
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -142,8 +154,9 @@ export function ListaPasos({
                 titulo={p.titulo}
                 orden={p.orden}
                 seleccionado={p.id === pasoSeleccionadoId}
+                deshabilitado={eliminando}
                 onSeleccionar={() => seleccionarPaso(p.id)}
-                onEliminar={() => eliminarPaso(p.id)}
+                onEliminar={() => onEliminar(p.id)}
               />
             ))}
           </div>

@@ -10,7 +10,11 @@ import { SubidaCaptura } from "@/components/editor/SubidaCaptura";
 import { useEditorStore } from "@/lib/store/useEditorStore";
 import type { TipoAlerta } from "@/lib/supabase/tipos";
 
-export function EditorPaso({ onRecargarCapturas }: { onRecargarCapturas: () => void }) {
+export function EditorPaso({
+  onRecargarCapturas,
+}: {
+  onRecargarCapturas: () => void | Promise<void>;
+}) {
   const paso = useEditorStore((s) => s.pasoSeleccionado());
   const actualizarPaso = useEditorStore((s) => s.actualizarPaso);
 
