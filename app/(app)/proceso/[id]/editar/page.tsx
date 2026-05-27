@@ -21,7 +21,7 @@ import {
 export default function EditarProcesoPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { proceso, cargando } = useProceso(id);
+  const { proceso, cargando } = useProceso(id, { revalidarEnFoco: false });
   const { esAdmin, cargando: cargandoPerfil } = usePerfil();
   const { recargarCapturas } = useCapturasPaso();
   const [eliminandoPaso, setEliminandoPaso] = useState(false);
@@ -48,16 +48,29 @@ export default function EditarProcesoPage() {
     }
   }, [esAdmin, cargandoPerfil, id, router]);
 
+  // Inicializa el store del editor solo cuando cambia el id del proceso
+  // cargado, no en cada nueva referencia de `proceso`. Esto evita que una
+  // recarga (auto-revalidación, refresco de capturas, etc.) pise lo que el
+  // usuario está editando o lo devuelva al primer paso.
+  const idProcesoCargadoRef = useRef<string | null>(null);
   useEffect(() => {
-    if (proceso) {
-      setProceso(proceso);
-      setPasos(proceso.pasos);
-      if (proceso.pasos[0]) {
-        useEditorStore.getState().seleccionarPaso(proceso.pasos[0].id);
-      }
+    if (!proceso) return;
+    if (idProcesoCargadoRef.current === proceso.id) return;
+    idProcesoCargadoRef.current = proceso.id;
+    setProceso(proceso);
+    setPasos(proceso.pasos);
+    if (proceso.pasos[0]) {
+      useEditorStore.getState().seleccionarPaso(proceso.pasos[0].id);
     }
-    return () => reset();
-  }, [proceso, setProceso, setPasos, reset]);
+  }, [proceso, setProceso, setPasos]);
+
+  // Limpia el store solo al desmontar la página.
+  useEffect(() => {
+    return () => {
+      idProcesoCargadoRef.current = null;
+      reset();
+    };
+  }, [reset]);
 
   const guardarTodo = useCallback(async () => {
     const { proceso: procesoActual, pasos: pasosActuales } =

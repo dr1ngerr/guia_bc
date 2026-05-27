@@ -4,7 +4,17 @@ import { useCallback, useEffect, useState } from "react";
 import { crearClienteSupabase } from "@/lib/supabase/cliente";
 import type { ProcesoConPasos } from "@/lib/supabase/tipos";
 
-export function useProceso(id: string) {
+interface UseProcesoOpciones {
+  /**
+   * Si `true`, recarga los datos cuando la pestaña vuelve a tener foco.
+   * Útil en la vista guía. Desactívalo en el editor para no pisar cambios
+   * locales sin guardar.
+   */
+  revalidarEnFoco?: boolean;
+}
+
+export function useProceso(id: string, opciones: UseProcesoOpciones = {}) {
+  const { revalidarEnFoco = true } = opciones;
   const [proceso, setProceso] = useState<ProcesoConPasos | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -66,6 +76,7 @@ export function useProceso(id: string) {
   // Refresca los datos cuando el usuario vuelve a la pestaña, para evitar
   // ver versiones obsoletas tras editar el proceso desde otra pestaña/ruta.
   useEffect(() => {
+    if (!revalidarEnFoco) return;
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
         cargar();
@@ -77,7 +88,7 @@ export function useProceso(id: string) {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onVisibility);
     };
-  }, [cargar]);
+  }, [cargar, revalidarEnFoco]);
 
   return { proceso, error, cargando, recargar: cargar };
 }
