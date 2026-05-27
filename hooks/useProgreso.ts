@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { crearClienteSupabase } from "@/lib/supabase/cliente";
 import type { ProgresoUsuario } from "@/lib/supabase/tipos";
+import { esFechaDeHoy } from "@/lib/utils/fecha-progreso";
 
 export function useProgreso(idProceso: string) {
   const supabase = useMemo(() => crearClienteSupabase(), []);
@@ -19,6 +20,18 @@ export function useProgreso(idProceso: string) {
       .eq("id_proceso", idProceso)
       .eq("id_usuario", user.id)
       .maybeSingle();
+
+    if (!data) return null;
+
+    // Reset diario: si el progreso no es de hoy, lo borramos y devolvemos null.
+    if (!esFechaDeHoy(data.iniciado_en)) {
+      await supabase
+        .from("progreso_usuario")
+        .delete()
+        .eq("id_proceso", idProceso)
+        .eq("id_usuario", user.id);
+      return null;
+    }
 
     return data;
   }, [idProceso, supabase]);
@@ -41,6 +54,9 @@ export function useProgreso(idProceso: string) {
           {
             id_usuario: user.id,
             id_proceso: idProceso,
+            // Refresca `iniciado_en` con la marca del último guardado para
+            // soportar el reset diario sin necesidad de columnas extra.
+            iniciado_en: new Date().toISOString(),
             ...datos,
           },
           { onConflict: "id_usuario,id_proceso" }

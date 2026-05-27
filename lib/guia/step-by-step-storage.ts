@@ -1,4 +1,5 @@
 import type { GuideProgressState } from "@/lib/guia/step-by-step-types";
+import { diaProgresoLocal } from "@/lib/utils/fecha-progreso";
 
 const VERSION = 1;
 
@@ -25,8 +26,17 @@ export function cargarProgresoGuia(guideId: string): GuideProgressState {
     const raw = localStorage.getItem(claveProgresoGuia(guideId));
     if (!raw) return estadoInicialProgreso();
 
-    const parsed = JSON.parse(raw) as GuideProgressState & { v?: number };
+    const parsed = JSON.parse(raw) as GuideProgressState & {
+      v?: number;
+      diaProgreso?: string;
+    };
     if (parsed.v !== VERSION) return estadoInicialProgreso();
+
+    // Reset diario: si el progreso es de otro día, descartamos.
+    if (parsed.diaProgreso && parsed.diaProgreso !== diaProgresoLocal()) {
+      localStorage.removeItem(claveProgresoGuia(guideId));
+      return estadoInicialProgreso();
+    }
 
     return {
       ...estadoInicialProgreso(),
@@ -52,7 +62,11 @@ export function guardarProgresoGuia(
   try {
     localStorage.setItem(
       claveProgresoGuia(guideId),
-      JSON.stringify({ ...estado, v: VERSION })
+      JSON.stringify({
+        ...estado,
+        v: VERSION,
+        diaProgreso: diaProgresoLocal(),
+      })
     );
   } catch {
     // Cuota superada u otro error: ignorar

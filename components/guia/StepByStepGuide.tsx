@@ -205,9 +205,10 @@ export function StepByStepGuide({
     onFinish?.();
   };
 
-  const reiniciarGuia = () => {
+  const reiniciarGuia = useCallback(() => {
     reiniciarProgresoGuia(guideId);
     const inicial = estadoInicialProgreso();
+    baseElapsedRef.current = 0;
     setCurrentStep(inicial.currentStep);
     setCompletedSteps([]);
     setIsFullscreenMode(false);
@@ -215,7 +216,26 @@ export function StepByStepGuide({
     setElapsedSeconds(0);
     setFeedback({});
     setFinished(false);
-  };
+  }, [guideId]);
+
+  // Reset diario automático: programa un timer hasta la próxima medianoche
+  // local. Si el usuario deja la pestaña abierta cruzando las 00:00, el
+  // progreso se limpia automáticamente sin necesidad de recargar.
+  useEffect(() => {
+    const programar = () => {
+      const ahora = new Date();
+      const manana = new Date(ahora);
+      manana.setHours(24, 0, 5, 0);
+      const ms = manana.getTime() - ahora.getTime();
+      return window.setTimeout(() => {
+        reiniciarGuia();
+        // Vuelve a programar para el siguiente día.
+        timeoutId = programar();
+      }, ms);
+    };
+    let timeoutId = programar();
+    return () => window.clearTimeout(timeoutId);
+  }, [reiniciarGuia]);
 
   if (!hidratado || total === 0) {
     return (
