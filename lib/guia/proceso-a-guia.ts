@@ -21,6 +21,10 @@ export function procesoAGuia(proceso: ProcesoConPasos): {
     estimatedMinutes: minutosPorPaso,
     helpText: paso.consejo ?? paso.texto_alerta ?? undefined,
     imageUrl: paso.capturas[0]?.url,
+    images: paso.capturas.map((c) => ({
+      url: c.url,
+      caption: c.pie_imagen ?? undefined,
+    })),
   }));
 
   return {

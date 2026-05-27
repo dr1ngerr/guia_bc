@@ -310,25 +310,49 @@ export function StepByStepGuide({
           <p className="text-foreground/90 whitespace-pre-wrap">{paso.description}</p>
         ))}
 
-      {paso.imageUrl && (
-        <button
-          type="button"
-          className="group relative block w-full rounded-lg overflow-hidden border bg-muted/30 focus:ring-2 focus:ring-primary cursor-zoom-in"
-          onClick={() => setImagenAmpliada(paso.imageUrl!)}
-          aria-label="Ampliar captura del paso"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={paso.imageUrl}
-            alt=""
-            className="w-full h-auto object-contain max-h-[70vh]"
-            loading="lazy"
-          />
-          <span className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
-            Click para ampliar
-          </span>
-        </button>
-      )}
+      {(() => {
+        const imagenes =
+          paso.images && paso.images.length > 0
+            ? paso.images
+            : paso.imageUrl
+              ? [{ url: paso.imageUrl }]
+              : [];
+        if (imagenes.length === 0) return null;
+        return (
+          <div className="space-y-3">
+            {imagenes.map((img, idx) => (
+              <figure key={`${img.url}-${idx}`} className="space-y-1">
+                <button
+                  type="button"
+                  className="group relative block w-full rounded-lg overflow-hidden border bg-muted/30 focus:ring-2 focus:ring-primary cursor-zoom-in"
+                  onClick={() => setImagenAmpliada(img.url)}
+                  aria-label={
+                    img.caption
+                      ? `Ampliar captura: ${img.caption}`
+                      : `Ampliar captura ${idx + 1}`
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.url}
+                    alt={img.caption ?? `Captura ${idx + 1}`}
+                    className="w-full h-auto object-contain max-h-[70vh]"
+                    loading="lazy"
+                  />
+                  <span className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                    Click para ampliar
+                  </span>
+                </button>
+                {img.caption && (
+                  <figcaption className="text-xs text-muted-foreground text-center">
+                    {img.caption}
+                  </figcaption>
+                )}
+              </figure>
+            ))}
+          </div>
+        );
+      })()}
     </article>
   );
 

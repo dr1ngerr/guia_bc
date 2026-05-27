@@ -1,11 +1,19 @@
 import type { ReactNode } from "react";
 
+export interface GuideStepImage {
+  url: string;
+  caption?: string;
+}
+
 export interface GuideStep {
   title: string;
   description: string;
   estimatedMinutes?: number;
   helpText?: string;
+  /** @deprecated Usar `images`. Se mantiene por compatibilidad. */
   imageUrl?: string;
+  /** Capturas asociadas al paso (en orden). */
+  images?: GuideStepImage[];
 }
 
 export interface GuideProgressState {
