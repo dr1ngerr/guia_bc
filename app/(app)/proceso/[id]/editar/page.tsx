@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { crearClienteSupabase } from "@/lib/supabase/cliente";
 import { useProceso } from "@/hooks/useProceso";
 import { useEditorStore } from "@/lib/store/useEditorStore";
@@ -26,6 +25,7 @@ export default function EditarProcesoPage() {
   const { esAdmin, cargando: cargandoPerfil } = usePerfil();
   const { recargarCapturas } = useCapturasPaso();
   const [eliminandoPaso, setEliminandoPaso] = useState(false);
+  const guardarRef = useRef<() => Promise<void>>(async () => {});
 
   const {
     setProceso,
@@ -86,7 +86,45 @@ export default function EditarProcesoPage() {
     }
   }, [setGuardando, setSucio, setUltimoGuardado]);
 
+  guardarRef.current = guardarTodo;
+
   useGuardadoAutomatico(guardarTodo);
+
+  // Avisa al usuario si intenta cerrar/recargar con cambios sin guardar.
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!useEditorStore.getState().sucio) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
+  // Guarda automáticamente al salir del editor si hay cambios pendientes.
+  useEffect(() => {
+    return () => {
+      if (useEditorStore.getState().sucio) {
+        guardarRef.current().catch(() => {});
+      }
+    };
+  }, []);
+
+  const irAGuia = useCallback(async () => {
+    try {
+      if (useEditorStore.getState().sucio) {
+        await guardarTodo();
+      }
+    } catch (e) {
+      toast({
+        title: "Error al guardar",
+        description: e instanceof Error ? e.message : "Error desconocido",
+        variant: "destructive",
+      });
+      return;
+    }
+    router.push(`/proceso/${id}`);
+  }, [guardarTodo, router, id]);
 
   const publicar = async (estado: "borrador" | "publicado") => {
     try {
@@ -256,8 +294,13 @@ export default function EditarProcesoPage() {
           >
             Publicar
           </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={`/proceso/${id}`}>Vista guía</Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={guardando}
+            onClick={() => irAGuia()}
+          >
+            Vista guía
           </Button>
         </div>
       </header>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -32,6 +33,17 @@ export function EditorTextoEnriquecido({
       },
     },
   });
+
+  // Sincroniza el contenido cuando cambia desde fuera (cambio de paso seleccionado, recarga, etc.).
+  // Evita pisar al usuario mientras está tecleando: solo actualiza si el editor no tiene foco.
+  useEffect(() => {
+    if (!editor) return;
+    const actual = editor.getHTML();
+    const objetivo = contenido || "";
+    if (actual === objetivo) return;
+    if (editor.isFocused) return;
+    editor.commands.setContent(objetivo, false);
+  }, [contenido, editor]);
 
   if (!editor) return null;
 

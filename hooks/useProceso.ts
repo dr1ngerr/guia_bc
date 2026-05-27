@@ -63,5 +63,21 @@ export function useProceso(id: string) {
     cargar();
   }, [cargar]);
 
+  // Refresca los datos cuando el usuario vuelve a la pestaña, para evitar
+  // ver versiones obsoletas tras editar el proceso desde otra pestaña/ruta.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        cargar();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onVisibility);
+    };
+  }, [cargar]);
+
   return { proceso, error, cargando, recargar: cargar };
 }
