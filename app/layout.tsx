@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   description:
     "Asistente profesional de guías de procesos para personal administrativo",
   robots: { index: false, follow: false },
+  icons: {
+    icon: "/icon.svg",
+  },
   metadataBase: process.env.VERCEL_URL
     ? new URL(`https://${process.env.VERCEL_URL}`)
     : undefined,

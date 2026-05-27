@@ -199,7 +199,7 @@ export default function EditarProcesoPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+    <div className="flex flex-col flex-1 min-h-0">
       <header className="border-b px-4 py-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <Input
@@ -271,7 +271,7 @@ export default function EditarProcesoPage() {
             eliminando={eliminandoPaso}
           />
         </div>
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
           <EditorPaso onRecargarCapturas={recargarCapturasDelPasoSeleccionado} />
         </div>
       </div>

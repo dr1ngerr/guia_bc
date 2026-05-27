@@ -27,6 +27,8 @@ export function LayoutApp({ children }: { children: React.ReactNode }) {
   };
 
   const enGuia = pathname.startsWith("/proceso/") && !pathname.includes("/editar");
+  const enEditor = pathname.includes("/editar");
+  const layoutAlturaFija = enGuia || enEditor;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -76,7 +78,14 @@ export function LayoutApp({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
       </header>
-      <main className={cn("flex-1", enGuia && "flex flex-col")}>{children}</main>
+      <main
+        className={cn(
+          "flex-1 min-h-0",
+          layoutAlturaFija && "flex flex-col overflow-hidden"
+        )}
+      >
+        {children}
+      </main>
     </div>
   );
 }

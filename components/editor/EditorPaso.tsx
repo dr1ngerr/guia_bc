@@ -27,7 +27,7 @@ export function EditorPaso({
   }
 
   return (
-    <div className="space-y-6 overflow-y-auto p-4">
+    <div className="h-full min-h-0 flex-1 overflow-y-auto p-4 pb-10 space-y-6">
       <div>
         <Label htmlFor="titulo-paso">Título del paso</Label>
         <Input
