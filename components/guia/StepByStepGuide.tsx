@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { VisorImagenAmpliada } from "@/components/guia/VisorImagenAmpliada";
 import { cn } from "@/lib/utils";
 import type { StepByStepGuideProps } from "@/lib/guia/step-by-step-types";
 import {
@@ -312,7 +313,7 @@ export function StepByStepGuide({
       {paso.imageUrl && (
         <button
           type="button"
-          className="block relative w-full max-w-md rounded-lg overflow-hidden border focus:ring-2 focus:ring-primary"
+          className="group relative block w-full rounded-lg overflow-hidden border bg-muted/30 focus:ring-2 focus:ring-primary cursor-zoom-in"
           onClick={() => setImagenAmpliada(paso.imageUrl!)}
           aria-label="Ampliar captura del paso"
         >
@@ -320,8 +321,12 @@ export function StepByStepGuide({
           <img
             src={paso.imageUrl}
             alt=""
-            className="w-full h-auto object-contain max-h-48"
+            className="w-full h-auto object-contain max-h-[70vh]"
+            loading="lazy"
           />
+          <span className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
+            Click para ampliar
+          </span>
         </button>
       )}
     </article>
@@ -574,21 +579,11 @@ export function StepByStepGuide({
       </Dialog>
 
       {/* Imagen ampliada */}
-      <Dialog
-        open={!!imagenAmpliada}
-        onOpenChange={() => setImagenAmpliada(null)}
-      >
-        <DialogContent className="max-w-4xl">
-          {imagenAmpliada && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={imagenAmpliada}
-              alt="Captura ampliada"
-              className="w-full h-auto max-h-[80vh] object-contain"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <VisorImagenAmpliada
+        url={imagenAmpliada}
+        alt={paso.title}
+        onClose={() => setImagenAmpliada(null)}
+      />
     </div>
   );
 }

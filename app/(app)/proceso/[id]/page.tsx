@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { notFound, useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Pencil, Printer } from "lucide-react";
+import { ChevronLeft, FileText, Pencil, Printer } from "lucide-react";
 import { useProceso } from "@/hooks/useProceso";
 import { useProgreso } from "@/hooks/useProgreso";
 import { usePerfil } from "@/hooks/usePerfil";
@@ -11,6 +11,12 @@ import { PanelPaso } from "@/components/guia/PanelPaso";
 import { StepByStepGuide } from "@/components/guia/StepByStepGuide";
 import { procesoAGuia } from "@/lib/guia/proceso-a-guia";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function ProcesoGuiaPage() {
   const { id } = useParams<{ id: string }>();
@@ -20,12 +26,51 @@ export default function ProcesoGuiaPage() {
   const { guardar } = useProgreso(id);
   const { esAdmin } = usePerfil();
   const printAll = searchParams.get("print") === "all";
+  const [preparandoImpresion, setPreparandoImpresion] = useState(false);
+
+  // Espera a que todas las imágenes carguen (o fallen) antes de imprimir.
+  const esperarImagenes = useCallback(async () => {
+    const imagenes = Array.from(
+      document.querySelectorAll<HTMLImageElement>("img")
+    );
+    await Promise.all(
+      imagenes.map((img) => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          const finalizar = () => resolve();
+          img.addEventListener("load", finalizar, { once: true });
+          img.addEventListener("error", finalizar, { once: true });
+          // Tope de 8s por imagen para que nada bloquee la impresión.
+          setTimeout(finalizar, 8000);
+        });
+      })
+    );
+  }, []);
 
   useEffect(() => {
     if (!printAll || !proceso) return;
-    const t = window.setTimeout(() => window.print(), 600);
-    return () => window.clearTimeout(t);
-  }, [printAll, proceso]);
+    let cancelado = false;
+    setPreparandoImpresion(true);
+
+    (async () => {
+      await esperarImagenes();
+      // Pequeño margen para que el navegador termine el layout.
+      await new Promise((r) => setTimeout(r, 200));
+      if (cancelado) return;
+      setPreparandoImpresion(false);
+      window.print();
+    })();
+
+    const onAfterPrint = () => {
+      router.replace(`/proceso/${id}`);
+    };
+    window.addEventListener("afterprint", onAfterPrint);
+
+    return () => {
+      cancelado = true;
+      window.removeEventListener("afterprint", onAfterPrint);
+    };
+  }, [printAll, proceso, esperarImagenes, router, id]);
 
   const persistirProgreso = useCallback(
     async (pasoActual: number, pasosCompletados: number[]) => {
@@ -48,6 +93,15 @@ export default function ProcesoGuiaPage() {
       completado_en: new Date().toISOString(),
     });
   }, [guardar, proceso?.pasos.length]);
+
+  const imprimirPaso = useCallback(async () => {
+    await esperarImagenes();
+    window.print();
+  }, [esperarImagenes]);
+
+  const imprimirTodo = useCallback(() => {
+    router.push(`/proceso/${id}?print=all`);
+  }, [router, id]);
 
   if (cargando) {
     return <p className="p-8 text-muted-foreground">Cargando guía…</p>;
@@ -75,39 +129,76 @@ export default function ProcesoGuiaPage() {
           </Link>
         </Button>
       )}
-      <Button variant="outline" size="sm" onClick={() => window.print()}>
-        <Printer className="h-4 w-4 mr-1" />
-        Imprimir paso
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => router.push(`/proceso/${id}?print=all`)}
-      >
-        <Printer className="h-4 w-4 mr-1" />
-        Imprimir todo
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Opciones de impresión"
+          >
+            <Printer className="h-4 w-4" />
+            <span className="sr-only sm:not-sr-only sm:ml-1">Imprimir</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onSelect={() => imprimirPaso()}>
+            <FileText className="h-4 w-4 mr-2" />
+            Imprimir este paso
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => imprimirTodo()}>
+            <Printer className="h-4 w-4 mr-2" />
+            Imprimir guía completa
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>
   );
 
   if (printAll) {
     return (
-      <div className="space-y-8 p-4 md:p-8">
-        <header>
-          <h1 className="text-3xl font-bold leading-tight">{proceso.nombre}</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            {proceso.herramienta}
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="no-imprimir border-b p-3 flex items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            {preparandoImpresion
+              ? "Preparando impresión…"
+              : "Si el diálogo de impresión no se abrió, púlsalo de nuevo."}
           </p>
-        </header>
-        {proceso.pasos.map((p, i) => (
-          <PanelPaso
-            key={p.id}
-            paso={p}
-            indice={i}
-            verificacionMarcada={false}
-            onVerificacionChange={() => undefined}
-          />
-        ))}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              disabled={preparandoImpresion}
+            >
+              <Printer className="h-4 w-4 mr-1" />
+              Imprimir ahora
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.replace(`/proceso/${id}`)}
+            >
+              Volver a la guía
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-8 p-4 md:p-8 overflow-y-auto">
+          <header>
+            <h1 className="text-3xl font-bold leading-tight">{proceso.nombre}</h1>
+            <p className="text-xs text-muted-foreground mt-1">
+              {proceso.herramienta}
+            </p>
+          </header>
+          {proceso.pasos.map((p, i) => (
+            <PanelPaso
+              key={p.id}
+              paso={p}
+              indice={i}
+              verificacionMarcada={false}
+              onVerificacionChange={() => undefined}
+            />
+          ))}
+        </div>
       </div>
     );
   }
